@@ -1,10 +1,24 @@
 package com.antiaction.common.datastructures.flatfilelookup;
 
+/**
+ * Optimised binary char array prefix comparator.
+ *
+ * @author nicl
+ */
 public class PrefixStringComparator {
 
+	/**
+	 * Basic constructor.
+	 */
 	public PrefixStringComparator() {
 	}
 
+	/**
+	 * 
+	 * @param prefix
+	 * @param str
+	 * @return
+	 */
 	public int comparePrefix(char[] prefix, char[] str) {
 		int res = 0;
 		int limit;

@@ -72,7 +72,7 @@ public class TestFlatfileLookupCaching {
 			Assert.fail( "Unexpected exception!" );
 		}
 
-		FlatfileLookupAbstract ffl = new FlatfileLookupCaching( indexFile, 4, 16 );
+		FlatfileLookupAbstract ffl = FlatfileLookupCaching.getInstance( indexFile, 4, 16 );
 		boolean bOpened;
 		long index;
 		String tmpStr;

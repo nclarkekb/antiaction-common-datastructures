@@ -4,21 +4,34 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Caching flat file binary search lookup. Caches n levels of the binary search lookup.
+ * Caching flat file binary search lookup. Caches n levels of the binary search lookup in a tree structure.
  *
  * @author nicl
  */
 public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 
+	/** Default cache tree height. Remember there are potentially sqr(n) nodes. */
+	public static final int DEFAULT_CACHE_TREE_LEVEL = 16;
+
+	/** How many tree node levels to cache. */
+	protected int cacheTreeLevel;
+
 	/** Cached root index node. */
 	protected CacheNode root = new CacheNode(1);
+
+	// FIXME Maybe
+	private FlatfileLookupCaching(File flatFile) {
+		this.flatFile = flatFile;
+		this.length = flatFile.length();
+		this.lastModified = flatFile.lastModified();
+	}
 
 	/**
 	 * Initialise lookup class with default buffer size value.
 	 * @param flatFile flat file to read from
 	 */
-	public FlatfileLookupCaching(File flatFile) {
-		this(flatFile, DEFAULT_SQRN_BUFSIZE, FlatfileReadLineByteBuffered.DEFAULT_READLINE_BYTEBUFFER_SIZE);
+	public static FlatfileLookupCaching getInstance(File flatFile) {
+		return getInstance(flatFile, DEFAULT_SQRN_BUFSIZE, RAFReadLineByteBuffered.DEFAULT_READLINE_BYTEBUFFER_SIZE, DEFAULT_CACHE_TREE_LEVEL);
 	}
 
 	/**
@@ -27,13 +40,32 @@ public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 	 * @param sqrNBufSize sqr(n) buffer size used to divide file into blocks
 	 * @param readLineBufSize buffer size used to read lines
 	 */
-	public FlatfileLookupCaching(File flatFile, int sqrNBufSize, int readLineBufSize) {
-		this.flatFile = flatFile;
-		this.length = flatFile.length();
-		this.lastModified = flatFile.lastModified();
-		this.sqrNBufSize = sqrNBufSize;
-		this.ffReadLine = new FlatfileReadLineByteBuffered(readLineBufSize);
-		this.psComparator = new PrefixStringComparator();
+	public static FlatfileLookupCaching getInstance(File flatFile, int sqrNBufSize, int readLineBufSize) {
+		return getInstance(flatFile, sqrNBufSize, readLineBufSize, DEFAULT_CACHE_TREE_LEVEL);
+	}
+
+	/**
+	 * Initialise lookup class with specific buffer size value and cache tree level.
+	 * @param flatFile flat file to read from
+	 * @param sqrNBufSize sqr(n) buffer size used to divide file into blocks
+	 * @param readLineBufSize buffer size used to read lines
+	 * @param cacheTreeLevel number of tree levels to cache in the binary lookup routine
+	 */
+	public static FlatfileLookupCaching getInstance(File flatFile, int sqrNBufSize, int readLineBufSize, int cacheTreeLevel) {
+		FlatfileLookupCaching fflc = new FlatfileLookupCaching(flatFile);
+		fflc.sqrNBufSize = sqrNBufSize;
+		fflc.ffReadLine = new RAFReadLineByteBuffered(readLineBufSize);
+		fflc.cacheTreeLevel = cacheTreeLevel;
+		fflc.psComparator = new PrefixStringComparator();
+		return fflc;
+	}
+
+	public static FlatfileLookupCaching getConcurrentInstance(File flatFile, int sqrNBufSize, int cacheTreeLevel) {
+		FlatfileLookupCaching fflc = new FlatfileLookupCaching(flatFile);
+		fflc.sqrNBufSize = sqrNBufSize;
+		fflc.cacheTreeLevel = cacheTreeLevel;
+		fflc.psComparator = new PrefixStringComparator();
+		return fflc;
 	}
 
 	/**
@@ -65,6 +97,11 @@ public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 
 	@Override
 	public synchronized long lookup(String prefix) throws IOException {
+		return lookup(prefix, ffReadLine);
+	}
+
+	@Override
+	public long lookup(String prefix, RAFReadLineByteBuffered ffReadLine) throws IOException {
 		char[] prefixArr = prefix.toCharArray();
 		long minBlk = 0;
 		long maxBlk = length >> sqrNBufSize;
@@ -99,7 +136,7 @@ public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 					minBlk = midBlk;
 					midBlk = minBlk + ((maxBlk - minBlk) >> 1);
 					if (node != null) {
-						if (node.gt == null && node.level < 16) {
+						if (node.gt == null && node.level < cacheTreeLevel) {
 							node.gt = new CacheNode(node.level + 1);
 						}
 						node = node.gt;
@@ -116,7 +153,7 @@ public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 					maxBlk = midBlk;
 					midBlk = minBlk + ((maxBlk - minBlk) >> 1);
 					if (node != null) {
-						if (node.lt == null && node.level < 16) {
+						if (node.lt == null && node.level < cacheTreeLevel) {
 							node.lt = new CacheNode(node.level + 1);
 						}
 						node = node.lt;
@@ -129,7 +166,8 @@ public class FlatfileLookupCaching extends FlatfileLookupAbstract {
 				break;
 			}
 		}
-		return search(minBlk << sqrNBufSize, prefixArr);
+		// Remember to use the correct ffReadline!
+		return search(minBlk << sqrNBufSize, prefixArr, ffReadLine);
 	}
 
 }

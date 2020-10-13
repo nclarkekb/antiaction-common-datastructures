@@ -20,7 +20,7 @@ public abstract class FlatfileLookupAbstract {
 	protected int sqrNBufSize;
 
 	/** Read line implementation used. */
-	protected FlatfileReadLineByteBuffered ffReadLine;
+	protected RAFReadLineByteBuffered ffReadLine;
 
 	protected PrefixStringComparator psComparator;
 
@@ -85,7 +85,8 @@ public abstract class FlatfileLookupAbstract {
 		if (raf != null) {
 			try {
 				raf.close();
-			} catch (IOException e) {
+			}
+			catch (IOException e) {
 			}
 			raf = null;
 			ffReadLine.setRaf(raf);
@@ -137,12 +138,36 @@ public abstract class FlatfileLookupAbstract {
 	public abstract long lookup(String prefix) throws IOException;
 
 	/**
+	 * Binary search flat file for prefix in concurrent mode.
+	 * @param prefix prefix to search for
+	 * @param ffReadLine use supplied instance for accessing file in concurrent mode
+	 * @return file pointer where the lookup last searched
+	 * @throws IOException if an I/O exception occurs while looking up
+	 */
+	public abstract long lookup(String prefix, RAFReadLineByteBuffered ffReadLine) throws IOException;
+
+	/**
 	 * Read the next line at the current file pointer.
 	 * @return next line at the current file pointer
 	 * @throws IOException if an I/O exception occurs while reading tne next line
-	 */
+	 */ 
 	public String readLine() throws IOException {
 		return ffReadLine.readLine();
+	}
+
+	/**
+	 * Get a new fancy buffered line reader for concurrent access to the index file.
+	 * Remember to close the buffered line reader when finished in order to release resources.
+	 * @param readLineBufSize buffer size used while reading lines
+	 * @return a new fancy line reader used to access the index file
+	 * @throws FileNotFoundException If the file can not be found
+	 */
+	public RAFReadLineByteBuffered getRAFReadLineByteBuffered(int readLineBufSize) throws FileNotFoundException {
+		RAFReadLineByteBuffered ffReadLine = new RAFReadLineByteBuffered(readLineBufSize);
+		// TODO Remember to close this or document it!
+		RandomAccessFile raf = new RandomAccessFile(flatFile, "r");
+		ffReadLine.setRaf(raf);
+		return ffReadLine;
 	}
 
 	/**
@@ -172,6 +197,44 @@ public abstract class FlatfileLookupAbstract {
 		}
 		ffReadLine.reset();
 		return offset;
+	}
+
+	public long search(long offset, char[] prefixArr, RAFReadLineByteBuffered ffReadLine) throws IOException {
+		// debug
+		//System.out.println(offset + " - " + prefix);
+		String tmpStr;
+		ffReadLine.seek(offset);
+		if (offset > 0) {
+			ffReadLine.readLine();
+		}
+		while (true) {
+			offset = ffReadLine.filePointer;
+			tmpStr = ffReadLine.readLine();
+			if (tmpStr == null) {
+				break;
+			}
+			if (psComparator.comparePrefix(prefixArr, tmpStr.toCharArray()) <= 0) {
+				break;
+			}
+		}
+		ffReadLine.reset();
+		return offset;
+	}
+
+	public String nextMatch(char[] prefixArr) throws IOException {
+		String tmpStr = ffReadLine.readLine();
+		if (tmpStr != null && psComparator.comparePrefix(prefixArr, tmpStr.toCharArray()) == 0) {
+			return tmpStr;
+		}
+		return null;
+	}
+
+	public String nextMatch(char[] prefixArr, RAFReadLineByteBuffered ffReadLine) throws IOException {
+		String tmpStr = ffReadLine.readLine();
+		if (tmpStr != null && psComparator.comparePrefix(prefixArr, tmpStr.toCharArray()) == 0) {
+			return tmpStr;
+		}
+		return null;
 	}
 
 }

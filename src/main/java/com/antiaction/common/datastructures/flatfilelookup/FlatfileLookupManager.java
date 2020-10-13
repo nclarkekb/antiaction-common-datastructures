@@ -40,7 +40,7 @@ public class FlatfileLookupManager {
 		FlatfileLookupAbstract flatfileLookup;
 		for (int i = 0; i < cdxes.size(); ++i) {
 			file = cdxes.get(i);
-			flatfileLookup = new FlatfileLookupCaching(file);
+			flatfileLookup = FlatfileLookupCaching.getInstance(file);
 			flatfileLookupList.add(flatfileLookup);
 			flatfileLookupMap.put(file.getPath(), flatfileLookup);
 			// debug

@@ -1,5 +1,6 @@
 package com.antiaction.common.datastructures.flatfilelookup;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -11,7 +12,7 @@ import java.nio.ByteBuffer;
  *
  * @author nicl
  */
-public class FlatfileReadLineByteBuffered {
+public class RAFReadLineByteBuffered implements Closeable {
 
 	/** Default read line buffer size. */
 	public static final int DEFAULT_READLINE_BYTEBUFFER_SIZE = 8192;
@@ -40,7 +41,7 @@ public class FlatfileReadLineByteBuffered {
 	/**
 	 * Initialise reader with default buffer size value.
 	 */
-	public FlatfileReadLineByteBuffered() {
+	public RAFReadLineByteBuffered() {
 		this(DEFAULT_READLINE_BYTEBUFFER_SIZE);
 	}
 
@@ -48,7 +49,7 @@ public class FlatfileReadLineByteBuffered {
 	 * Initialise reader with specific buffer size value.
 	 * @param bufsize buffer size
 	 */
-	public FlatfileReadLineByteBuffered(int bufsize) {
+	public RAFReadLineByteBuffered(int bufsize) {
 		this.buffer = new byte[DEFAULT_READLINE_BYTEBUFFER_SIZE];
 		this.byteBuffer = ByteBuffer.wrap(buffer);
 		this.byteBuffer.limit(0);
@@ -60,6 +61,19 @@ public class FlatfileReadLineByteBuffered {
 	 */
 	public void setRaf(RandomAccessFile raf) {
 		this.raf = raf;
+	}
+
+	/**
+	 * Close <code>RandomAccessFile</code> if still associated and release buffers.
+	 * @throws IOException if an I/O exception occurs while closing the file
+	 */
+	public void close() throws IOException {
+		if (raf != null) {
+			raf.close();
+			raf = null;
+		}
+		buffer = null;
+		byteBuffer = null;
 	}
 
 	/**

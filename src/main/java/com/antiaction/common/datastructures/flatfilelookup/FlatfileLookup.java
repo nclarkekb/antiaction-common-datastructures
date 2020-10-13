@@ -15,7 +15,7 @@ public class FlatfileLookup extends FlatfileLookupAbstract {
 	 * @param flatFile flat file to read from
 	 */
 	public FlatfileLookup(File flatFile) {
-		this(flatFile, DEFAULT_SQRN_BUFSIZE, FlatfileReadLineByteBuffered.DEFAULT_READLINE_BYTEBUFFER_SIZE);
+		this(flatFile, DEFAULT_SQRN_BUFSIZE, RAFReadLineByteBuffered.DEFAULT_READLINE_BYTEBUFFER_SIZE);
 	}
 
 	/**
@@ -29,12 +29,17 @@ public class FlatfileLookup extends FlatfileLookupAbstract {
 		this.length = flatFile.length();
 		this.lastModified = flatFile.lastModified();
 		this.sqrNBufSize = sqrNBufSize;
-		this.ffReadLine = new FlatfileReadLineByteBuffered(readLineBufSize);
+		this.ffReadLine = new RAFReadLineByteBuffered(readLineBufSize);
 		this.psComparator = new PrefixStringComparator();
 	}
 
 	@Override
 	public synchronized long lookup(String prefix) throws IOException {
+		return lookup(prefix, ffReadLine);
+	}
+
+	@Override
+	public long lookup(String prefix, RAFReadLineByteBuffered ffReadLine) throws IOException {
 		char[] prefixArr = prefix.toCharArray();
 		long minBlk = 0;
 		long maxBlk = length >> sqrNBufSize;
@@ -56,8 +61,6 @@ public class FlatfileLookup extends FlatfileLookupAbstract {
 					midBlk = minBlk + ((maxBlk - minBlk) >> 1);
 					break;
 				case 0:
-					// debug
-					//System.out.println("Semi bingo!");
 					maxBlk = midBlk;
 					midBlk = maxBlk - intSqrt(maxBlk - minBlk);
 					break;

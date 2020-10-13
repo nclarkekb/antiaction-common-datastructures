@@ -11,10 +11,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import com.antiaction.common.datastructures.flatfilelookup.FlatfileReadLineByteBuffered;
+import com.antiaction.common.datastructures.flatfilelookup.RAFReadLineByteBuffered;
 
 @RunWith(JUnit4.class)
-public class TestFlatfileReadLine {
+public class TestRAFReadLineByteBuffered {
 
 	@Test
 	public void test_flatfilereadline() {
@@ -70,7 +70,7 @@ public class TestFlatfileReadLine {
 
 		try {
 			raf = new RandomAccessFile( indexFile, "r" );
-			FlatfileReadLineByteBuffered ffReadLine = new FlatfileReadLineByteBuffered();
+			RAFReadLineByteBuffered ffReadLine = new RAFReadLineByteBuffered();
 			ffReadLine.setRaf(raf);
 
 			for ( int i=0; i<lines.size(); ++i ) {
@@ -98,7 +98,7 @@ public class TestFlatfileReadLine {
 
 		try {
 			raf = new RandomAccessFile( indexFile, "r" );
-			FlatfileReadLineByteBuffered ffReadLine = new FlatfileReadLineByteBuffered();
+			RAFReadLineByteBuffered ffReadLine = new RAFReadLineByteBuffered();
 			ffReadLine.setRaf(raf);
 
 			for ( int i=0; i<lines.size(); ++i ) {
